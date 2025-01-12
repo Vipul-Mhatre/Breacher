@@ -1,0 +1,1 @@
+// Advanced log viewing component 
