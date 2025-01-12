@@ -2,15 +2,29 @@
   {
     "_id": "ho4q0yk3e",
     "email": "admin@example.com",
-    "password": "admin123",
+    "password": "$2b$10$5XS/gnRuG50APeVyu37ew.NhNSsSjDwZmjKCsKKPV9JAg3L2LZ9eC",
     "name": "Admin User",
     "role": "admin"
   },
   {
     "_id": "259fd6ocp",
     "email": "analyst@example.com",
-    "password": "analyst123",
+    "password": "$2b$10$6wPYc1Anp8wlnrJUT1xM6uzFEeOxr8r7.7h/JdeN5T.4OVrl.bJmm",
     "name": "Analyst User",
     "role": "analyst"
+  },
+  {
+    "_id": "u2ycyye5a",
+    "email": "analyst2@example.com",
+    "password": "$2b$10$K/DsXuSavW1.jb1KP8P1bOEcu/CcLy7jt9c3cLuc3QHTO6YYzDoqu",
+    "name": "analyst 2 ",
+    "role": "analyst"
+  },
+  {
+    "_id": "436633e1l",
+    "email": "jsh@123",
+    "password": "$2b$10$CQcp0Zo3QmJEbyAqPIg0BuTrH7vJzJ6LqIWmWHzzgcNI4e0bFoVr.",
+    "name": "jsh ",
+    "role": "employee"
   }
 ]

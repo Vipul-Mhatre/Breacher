@@ -8,14 +8,12 @@ function Notifications() {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    const subscription = NotificationService.onNotification().subscribe(
-      (notif) => {
-        setNotification(notif);
-        setOpen(true);
-      }
-    );
+    const unsubscribe = NotificationService.subscribe((notif) => {
+      setNotification(notif);
+      setOpen(true);
+    });
 
-    return () => subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   const handleClose = () => {

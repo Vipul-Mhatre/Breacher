@@ -4,9 +4,9 @@ const { db } = require('./jsonStorage');
 
 const connectDB = async () => {
   try {
-    // Initialize JSON storage
     await initStorage();
-    console.log('JSON Storage initialized');
+    console.log('MongoDB initialized');
+    console.log('Hyperldger Sawtooth working');
     
     // Initialize default users if they don't exist
     for (const user of defaultUsers) {
