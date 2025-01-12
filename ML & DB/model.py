@@ -16,6 +16,9 @@ import logging
 import os
 from flask import Flask, jsonify, request
 from bson import ObjectId
+from pandas import Timestamp
+import pickle
+import os.path
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -26,6 +29,10 @@ class CustomJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, ObjectId):
             return str(obj)
+        if isinstance(obj, Timestamp):
+            return obj.strftime('%Y-%m-%d %H:%M:%S')
+        if isinstance(obj, datetime.datetime):
+            return obj.strftime('%Y-%m-%d %H:%M:%S')
         return super().default(obj)
 
 app.json_encoder = CustomJSONEncoder
@@ -53,11 +60,20 @@ class CyberSecurityDetectionSystem:
         self.isolation_forest = None
         self.autoencoder = None
         self.scaler = StandardScaler()
+        self.feature_columns = None  # Store feature columns used during training
+        self.severity_mapping = {
+            "Low": 1, 
+            "Medium": 2, 
+            "High": 3, 
+            "Critical": 4,
+            "Unknown": 0
+        }
         
     def preprocess_data(self, df):
         """Preprocess the cybersecurity data"""
-        # Convert timestamp
-        df["Timestamp"] = pd.to_datetime(df['Timestamp']).astype(int) / 10**9
+        # Convert timestamp to unix timestamp
+        df["Timestamp"] = pd.to_datetime(df['Timestamp'])
+        df["Timestamp"] = df["Timestamp"].astype(int) // 10**9
         
         # Map severity levels
         severity_mapping = {"Low": 1, "Medium": 2, "High": 3, "Critical": 4}
@@ -107,15 +123,20 @@ class CyberSecurityDetectionSystem:
             # Drop original User Agent column
             df.drop(columns=['User Agent'], inplace=True)
         
-        # Map attack types to integers
+        # Map attack types to integers with better handling of unknown types
         attack_type_mapping = {
             "Malware": 1,
             "Phishing": 2,
             "Insider Threat": 3,
             "Ransomware": 4,
-            "DDoS": 5
+            "DDoS": 5,
+            "Unknown": 0  # Add default mapping for unknown
         }
-        df["Attack Type"] = df["Attack Type"].replace(attack_type_mapping)
+        if "Attack Type" in df.columns:
+            df["Attack Type"] = df["Attack Type"].fillna("Unknown")
+            df["Attack Type"] = df["Attack Type"].apply(lambda x: attack_type_mapping.get(x, 0))
+        else:
+            df["Attack Type"] = 0  # Set default value if column doesn't exist
         
         # Drop unnecessary columns if they exist
         columns_to_drop = ["Threat Intelligence", "Event ID"]
@@ -123,6 +144,20 @@ class CyberSecurityDetectionSystem:
         
         # One-hot encode response actions
         df = pd.get_dummies(df, columns=['Response Action'])
+        
+        # Ensure all expected columns are present
+        expected_columns = [
+            'Response Action_Blocked', 'Response Action_Contained', 
+            'Response Action_Eradicated', 'Response Action_Recovered', 
+            'Response Action_Monitor'
+        ]
+        for col in expected_columns:
+            if col not in df.columns:
+                df[col] = 0
+        
+        # Ensure columns are in the same order as during training
+        if self.feature_columns is not None:
+            df = df.reindex(columns=self.feature_columns, fill_value=0)
         
         return df
     
@@ -187,6 +222,9 @@ class CyberSecurityDetectionSystem:
         X = df.drop('Attack Type', axis=1)
         y = df['Attack Type']
         
+        # Store feature columns
+        self.feature_columns = X.columns.tolist()
+        
         # Split and scale data
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         X_train_scaled = self.scaler.fit_transform(X_train)
@@ -238,50 +276,109 @@ class CyberSecurityDetectionSystem:
             'autoencoder': self.autoencoder
         }
 
+    def _convert_ip_to_int(self, ip_str):
+        """Helper function to convert IP address string to integer"""
+        try:
+            return int(ipaddress.IPv4Address(ip_str))
+        except:
+            # Return a default value or raise an error
+            logging.warning(f"Invalid IP address: {ip_str}, using default value")
+            return 0
+
+    def _convert_severity_to_int(self, severity_str):
+        """Helper function to convert severity string to integer"""
+        try:
+            # First try direct integer conversion
+            return int(severity_str)
+        except (ValueError, TypeError):
+            # If that fails, try mapping the string
+            return self.severity_mapping.get(severity_str, 0)
+
+    def _prepare_alert_for_json(self, alert):
+        """Convert alert data to JSON serializable format"""
+        serializable_alert = alert.copy()
+        # Convert ObjectId to string if present
+        if '_id' in serializable_alert:
+            serializable_alert['_id'] = str(serializable_alert['_id'])
+        # Ensure all numeric types are native Python types
+        for key, value in serializable_alert.items():
+            if isinstance(value, np.integer):
+                serializable_alert[key] = int(value)
+            elif isinstance(value, np.floating):
+                serializable_alert[key] = float(value)
+        return serializable_alert
+
     def detect_anomalies(self, new_data):
         """Detect anomalies using all three models"""
-        processed_data = self.preprocess_data(new_data)
-        scaled_data = self.scaler.transform(processed_data.drop('Attack Type', axis=1))
-        
-        # LightGBM predictions
-        lgbm_predictions = self.lgbm_model.predict(scaled_data)
-        lgbm_labels = [int(np.argmax(prob)) for prob in lgbm_predictions]
-        
-        # Isolation Forest predictions
-        if_predictions = self.isolation_forest.predict(scaled_data)
-        
-        # Autoencoder predictions
-        ae_predictions = self.autoencoder.predict(scaled_data)
-        ae_mse = np.mean(np.power(scaled_data - ae_predictions, 2), axis=1)
-        ae_threshold = np.percentile(ae_mse, 95)
-        
-        alerts = []
-        for idx in range(len(new_data)):
-            # Combine predictions
-            is_anomaly = (
-                float(np.max(lgbm_predictions[idx])) > 0.8 or
-                if_predictions[idx] == -1 or
-                ae_mse[idx] > ae_threshold
-            )
+        try:
+            processed_data = self.preprocess_data(new_data.copy())  # Make a copy to avoid warnings
             
-            if is_anomaly:
-                alert = {
-                    'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-                    'source_ip': int(new_data.iloc[idx]['Source IP']),
-                    'destination_ip': int(new_data.iloc[idx]['Destination IP']),
-                    'attack_type': int(lgbm_labels[idx]),
-                    'confidence': float(np.max(lgbm_predictions[idx])),
-                    'severity': int(new_data.iloc[idx]['Attack Severity']),
-                    'isolation_forest_anomaly': bool(if_predictions[idx] == -1),
-                    'autoencoder_anomaly': bool(ae_mse[idx] > ae_threshold),
-                    'autoencoder_score': float(ae_mse[idx])
-                }
-                alerts.append(alert)
+            # Get features excluding Attack Type if it exists
+            feature_data = processed_data.copy()
+            if 'Attack Type' in feature_data.columns:
+                feature_data = feature_data.drop('Attack Type', axis=1)
+            
+            # Ensure all expected columns are present
+            if self.feature_columns is None:
+                raise ValueError("Feature columns are not set. Models need to be trained first.")
+            
+            # Add missing columns with zeros
+            for col in self.feature_columns:
+                if col not in feature_data.columns:
+                    feature_data[col] = 0
+            
+            # Keep only the columns used during training
+            feature_data = feature_data[self.feature_columns]
+            
+            scaled_data = self.scaler.transform(feature_data)
+            
+            # LightGBM predictions
+            lgbm_predictions = self.lgbm_model.predict(scaled_data)
+            lgbm_labels = [int(np.argmax(prob)) for prob in lgbm_predictions]
+            
+            # Isolation Forest predictions
+            if_predictions = self.isolation_forest.predict(scaled_data)
+            
+            # Autoencoder predictions
+            ae_predictions = self.autoencoder.predict(scaled_data)
+            ae_mse = np.mean(np.power(scaled_data - ae_predictions, 2), axis=1)
+            ae_threshold = np.percentile(ae_mse, 95)
+            
+            alerts = []
+            for idx in range(len(new_data)):
+                # Combine predictions
+                is_anomaly = (
+                    float(np.max(lgbm_predictions[idx])) > 0.8 or
+                    if_predictions[idx] == -1 or
+                    ae_mse[idx] > ae_threshold
+                )
                 
-        if alerts:
-            self.alerts_collection.insert_many(alerts)
+                if is_anomaly:
+                    alert = {
+                        'timestamp': datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        'source_ip': self._convert_ip_to_int(new_data.iloc[idx]['Source IP']),
+                        'destination_ip': self._convert_ip_to_int(new_data.iloc[idx]['Destination IP']),
+                        'attack_type': int(lgbm_labels[idx]),
+                        'confidence': float(np.max(lgbm_predictions[idx])),
+                        'severity': self._convert_severity_to_int(new_data.iloc[idx]['Attack Severity']),
+                        'isolation_forest_anomaly': bool(if_predictions[idx] == -1),
+                        'autoencoder_anomaly': bool(ae_mse[idx] > ae_threshold),
+                        'autoencoder_score': float(ae_mse[idx])
+                    }
+                    alerts.append(alert)
+                    
+            if alerts:
+                # Insert alerts into MongoDB
+                inserted_alerts = self.alerts_collection.insert_many(alerts)
+                # Convert alerts to JSON serializable format
+                json_alerts = [self._prepare_alert_for_json(alert) for alert in alerts]
+                return json_alerts
+            
+            return []
         
-        return alerts
+        except Exception as e:
+            logging.error(f"Error in detect_anomalies: {str(e)}", exc_info=True)
+            raise
     
     def get_recent_alerts(self, limit=10):
         """Retrieve recent alerts from MongoDB"""
@@ -299,9 +396,64 @@ def json_serializable(obj):
         return str(obj)
     raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
 
+# Add global variable for system instance
+system = None
+
+# Add model persistence functions
+def save_models(system):
+    """Save trained models to disk"""
+    os.makedirs("models", exist_ok=True)
+    with open("models/system.pkl", "wb") as f:
+        pickle.dump({
+            'scaler': system.scaler,
+            'lgbm': system.lgbm_model,
+            'isolation_forest': system.isolation_forest,
+            'autoencoder': system.autoencoder,
+            'feature_columns': system.feature_columns
+        }, f)
+
+def load_models(system):
+    """Load trained models from disk"""
+    try:
+        with open("models/system.pkl", "rb") as f:
+            models = pickle.load(f)
+            system.scaler = models['scaler']
+            system.lgbm_model = models['lgbm']
+            system.isolation_forest = models['isolation_forest']
+            system.autoencoder = models['autoencoder']
+            system.feature_columns = models.get('feature_columns', None)  # Handle missing feature_columns
+        return True
+    except FileNotFoundError:
+        return False
+
+def initialize_system():
+    """Initialize and train the system on startup"""
+    global system
+    system = CyberSecurityDetectionSystem()
+    
+    # Try to load existing models first
+    if load_models(system):
+        logging.info("Loaded existing models successfully")
+        if system.feature_columns is None:
+            raise ValueError("Loaded models but feature columns are not set. Ensure the models are trained properly.")
+        return system
+        
+    try:
+        # Train new models if loading fails
+        df = pd.read_csv("cybersecurity_dataset.csv")
+        processed_df = system.preprocess_data(df)
+        system.train_models(processed_df)
+        save_models(system)
+        logging.info("Models trained and saved successfully")
+    except Exception as e:
+        logging.error(f"Error initializing system: {e}")
+        raise
+    return system
+
+# Modify the routes to use the global system instance
 @app.route('/train', methods=['POST'])
 def train():
-    system = CyberSecurityDetectionSystem()
+    global system
     df = pd.read_csv("cybersecurity_dataset.csv")
     processed_df = system.preprocess_data(df)
     system.train_models(processed_df)
@@ -310,17 +462,62 @@ def train():
 
 @app.route('/detect', methods=['POST'])
 def detect():
-    system = CyberSecurityDetectionSystem()
-    new_data = pd.DataFrame(request.json)
-    alerts = system.detect_anomalies(new_data)
-    return jsonify(alerts)
+    global system
+    if not system:
+        return jsonify({"error": "System not initialized"}), 500
+    
+    try:
+        data = request.json
+        logging.info(f"Received detection request: {data}")
+        
+        # Convert data to expected format if it's a dict
+        if isinstance(data, dict):
+            data = [data]
+        
+        # Validate the data structure
+        if not isinstance(data, list):
+            return jsonify({"error": "Invalid data format. Expected list or dict"}), 400
+            
+        # Convert to DataFrame
+        new_data = pd.DataFrame(data)
+        logging.info(f"Converted to DataFrame: {new_data.columns}")
+        
+        # Ensure required fields are present
+        required_fields = ['Source IP', 'Destination IP', 'Timestamp', 'Attack Severity']
+        missing_fields = [field for field in required_fields if field not in new_data.columns]
+        if missing_fields:
+            return jsonify({"error": f"Missing required fields: {missing_fields}"}), 400
+        
+        # Add missing columns if necessary
+        if 'User Agent' not in new_data.columns:
+            new_data['User Agent'] = 'Unknown'
+        if 'Data Exfiltrated' not in new_data.columns:
+            new_data['Data Exfiltrated'] = False
+        if 'Attack Type' not in new_data.columns:
+            new_data['Attack Type'] = 'Unknown'
+            
+        try:
+            alerts = system.detect_anomalies(new_data)
+            logging.info(f"Detection complete. Found {len(alerts)} alerts")
+            # Alerts are already JSON serializable at this point
+            return jsonify(alerts)
+        except Exception as e:
+            logging.error(f"Error in anomaly detection: {e}", exc_info=True)
+            return jsonify({"error": f"Detection error: {str(e)}"}), 500
+            
+    except Exception as e:
+        logging.error(f"Error processing detection request: {e}", exc_info=True)
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/alerts', methods=['GET'])
 def alerts():
-    system = CyberSecurityDetectionSystem()
+    global system
+    if not system:
+        return jsonify({"error": "System not initialized"}), 500
     recent_alerts = system.get_recent_alerts()
     return jsonify(recent_alerts)
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    initialize_system()  # Initialize before running
+    app.run(debug=True, port=5001)
 

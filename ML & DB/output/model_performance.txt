@@ -1,1 +1,11 @@
 Models trained successfully!
+LightGBM Model:
+Number of Boosting Rounds: 0
+Best Score: defaultdict(<class 'collections.OrderedDict'>, {'valid_0': OrderedDict([('multi_logloss', np.float64(1.6475598061035968))])})
+
+Isolation Forest Model:
+Number of Estimators: 100
+
+Autoencoder Model:
+Input Dimension: 16
+Encoding Dimension: 32

@@ -75,7 +75,7 @@ function Layout({ children }) {
   };
 
   const handleDetailedAnalysis = () => {
-    window.open('http://localhost:5001', '_blank');
+    window.open('http://localhost:8501', '_blank');
   };
 
   return (
