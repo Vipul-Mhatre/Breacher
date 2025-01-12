@@ -10,7 +10,7 @@ import requests
 # Initialize the detection system
 @st.cache_resource
 def initialize_system():
-    return "http://localhost:5000"
+    return "http://localhost:5001"
 
 def parse_datetime(dt_string):
     """Parse datetime string in multiple formats"""

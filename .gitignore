@@ -44,9 +44,6 @@ Thumbs.db
 /sawtooth/keys/
 /sawtooth/data/
 
-
-env
-
 /env/
 /venv/
 env/
