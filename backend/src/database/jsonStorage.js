@@ -40,13 +40,9 @@ async function writeData(file, data) {
 // Database operations
 const db = {
   logs: {
-    async find(query = {}, options = {}) {
+    async find(query = {}) {
       const logs = await readData(FILES.logs);
       return logs.filter(log => matchQuery(log, query));
-    },
-    async findOne(query = {}) {
-      const logs = await readData(FILES.logs);
-      return logs.find(log => matchQuery(log, query));
     },
     async create(data) {
       const logs = await readData(FILES.logs);
@@ -57,6 +53,10 @@ const db = {
     }
   },
   users: {
+    async find(query = {}) {
+      const users = await readData(FILES.users);
+      return users.filter(user => matchQuery(user, query));
+    },
     async findOne(query = {}) {
       const users = await readData(FILES.users);
       return users.find(user => matchQuery(user, query));
@@ -67,6 +67,22 @@ const db = {
       users.push(newUser);
       await writeData(FILES.users, users);
       return newUser;
+    },
+    async update(id, data) {
+      const users = await readData(FILES.users);
+      const index = users.findIndex(user => user._id === id);
+      if (index === -1) throw new Error('User not found');
+      users[index] = { ...users[index], ...data };
+      await writeData(FILES.users, users);
+      return users[index];
+    },
+    async delete(id) {
+      const users = await readData(FILES.users);
+      const index = users.findIndex(user => user._id === id);
+      if (index === -1) throw new Error('User not found');
+      const [deletedUser] = users.splice(index, 1);
+      await writeData(FILES.users, users);
+      return deletedUser;
     }
   }
 };

@@ -45,8 +45,18 @@ Thumbs.db
 /sawtooth/data/
 
 
+
 env
 
 /package-lock.json
 
 system.pkl
+
+/env/
+/venv/
+env/
+venv/
+.env/
+.venv/
+env
+
