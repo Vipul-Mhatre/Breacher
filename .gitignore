@@ -50,3 +50,4 @@ env/
 venv/
 .env/
 .venv/
+env
