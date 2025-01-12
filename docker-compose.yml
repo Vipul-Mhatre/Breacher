@@ -1,0 +1,30 @@
+version: '3.8'
+
+services:
+  validator:
+    image: hyperledger/sawtooth-validator:latest
+    container_name: sawtooth-validator
+    expose:
+      - 4004
+    ports:
+      - "4004:4004"
+    environment:
+      - SAWTOOTH_VALIDATOR_ARGS=--endpoint tcp://validator:4004 --bind component:tcp://eth0:4004 --bind network:tcp://eth0:8800
+    
+  rest-api:
+    image: hyperledger/sawtooth-rest-api:latest
+    container_name: sawtooth-rest-api
+    ports:
+      - "8008:8008"
+    depends_on:
+      - validator
+    environment:
+      - SAWTOOTH_REST_API_CONNECT=tcp://validator:4004
+
+  settings-tp:
+    image: hyperledger/sawtooth-settings-tp:latest
+    container_name: sawtooth-settings-tp
+    depends_on:
+      - validator
+    environment:
+      - SAWTOOTH_SETTINGS_TCP=tcp://validator:4004 

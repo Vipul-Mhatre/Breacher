@@ -1,10 +1,10 @@
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { db } = require('../database/jsonStorage');
 const config = require('../config/config');
 
 // Helper function to generate JWT token
 const signToken = (id) => {
-  return jwt.sign({ id }, config.app.jwtSecret, {
+  return jwt.sign({ id }, config.app.jwtSecret || 'your-secret-key', {
     expiresIn: config.app.jwtExpiresIn
   });
 };
@@ -57,6 +57,7 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    // Check if email and password exist
     if (!email || !password) {
       return res.status(400).json({
         status: 'error',
@@ -64,18 +65,18 @@ exports.login = async (req, res) => {
       });
     }
 
-    const user = await User.findOne({ email });
-    if (!user || !(await user.comparePassword(password))) {
+    // Find user
+    const user = await db.users.findOne({ email });
+
+    // Check if user exists and password is correct
+    if (!user || user.password !== password) {
       return res.status(401).json({
         status: 'error',
         message: 'Incorrect email or password'
       });
     }
 
-    // Update last login
-    user.lastLogin = new Date();
-    await user.save();
-
+    // Generate token
     const token = signToken(user._id);
 
     res.json({
@@ -91,9 +92,10 @@ exports.login = async (req, res) => {
       }
     });
   } catch (error) {
-    res.status(400).json({
+    console.error('Login error:', error);
+    res.status(500).json({
       status: 'error',
-      message: error.message
+      message: 'An error occurred during login'
     });
   }
 };

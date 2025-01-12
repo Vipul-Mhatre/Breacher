@@ -8,54 +8,50 @@ import {
   Typography,
   Grid,
   Chip,
-  makeStyles,
   Box,
-} from '@material-ui/core';
+} from '@mui/material';
 import {
   Warning as WarningIcon,
   Error as ErrorIcon,
   Info as InfoIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
+import { styled } from '@mui/material/styles';
 
-const useStyles = makeStyles((theme) => ({
-  section: {
-    marginBottom: theme.spacing(2),
-  },
-  label: {
-    fontWeight: 'bold',
-    color: theme.palette.text.secondary,
-  },
-  value: {
-    wordBreak: 'break-all',
-  },
-  chip: {
-    margin: theme.spacing(0.5),
-  },
-  severityIcon: {
-    marginRight: theme.spacing(1),
-  },
-  high: {
-    color: theme.palette.error.main,
-  },
-  medium: {
-    color: theme.palette.warning.main,
-  },
-  low: {
-    color: theme.palette.info.main,
-  },
+const StyledSection = styled('div')(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+}));
+
+const StyledLabel = styled(Typography)(({ theme }) => ({
+  fontWeight: 'bold',
+  color: theme.palette.text.secondary,
+}));
+
+const StyledValue = styled('div')({
+  wordBreak: 'break-all',
+});
+
+const StyledChip = styled(Chip)(({ theme }) => ({
+  margin: theme.spacing(0.5),
+}));
+
+const SeverityIcon = styled('span')(({ theme, severity }) => ({
+  marginRight: theme.spacing(1),
+  color: severity === 'high' 
+    ? theme.palette.error.main 
+    : severity === 'medium'
+    ? theme.palette.warning.main
+    : theme.palette.info.main,
 }));
 
 function AlertDetailsDialog({ alert, onClose, onAcknowledge }) {
-  const classes = useStyles();
-
   const getSeverityIcon = (severity) => {
     switch (severity.toLowerCase()) {
       case 'high':
-        return <ErrorIcon className={`${classes.severityIcon} ${classes.high}`} />;
+        return <ErrorIcon />;
       case 'medium':
-        return <WarningIcon className={`${classes.severityIcon} ${classes.medium}`} />;
+        return <WarningIcon />;
       case 'low':
-        return <InfoIcon className={`${classes.severityIcon} ${classes.low}`} />;
+        return <InfoIcon />;
       default:
         return null;
     }
@@ -65,102 +61,102 @@ function AlertDetailsDialog({ alert, onClose, onAcknowledge }) {
     <Dialog open={true} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>
         <Box display="flex" alignItems="center">
-          {getSeverityIcon(alert.severity)}
+          <SeverityIcon severity={alert.severity}>
+            {getSeverityIcon(alert.severity)}
+          </SeverityIcon>
           Alert Details - {alert.type}
         </Box>
       </DialogTitle>
       <DialogContent>
         <Grid container spacing={2}>
-          <Grid item xs={12} className={classes.section}>
-            <Typography variant="subtitle2" className={classes.label}>
+          <StyledSection>
+            <StyledLabel variant="subtitle2">
               Timestamp
-            </Typography>
-            <Typography className={classes.value}>
+            </StyledLabel>
+            <StyledValue>
               {new Date(alert.timestamp).toLocaleString()}
-            </Typography>
-          </Grid>
+            </StyledValue>
+          </StyledSection>
 
-          <Grid item xs={12} sm={6} className={classes.section}>
-            <Typography variant="subtitle2" className={classes.label}>
+          <StyledSection>
+            <StyledLabel variant="subtitle2">
               Severity
-            </Typography>
-            <Chip
+            </StyledLabel>
+            <StyledChip
               label={alert.severity}
               color={alert.severity.toLowerCase() === 'high' ? 'secondary' : 'default'}
               size="small"
             />
-          </Grid>
+          </StyledSection>
 
-          <Grid item xs={12} sm={6} className={classes.section}>
-            <Typography variant="subtitle2" className={classes.label}>
+          <StyledSection>
+            <StyledLabel variant="subtitle2">
               Status
-            </Typography>
-            <Chip
+            </StyledLabel>
+            <StyledChip
               label={alert.status}
               color={alert.status === 'acknowledged' ? 'primary' : 'default'}
               size="small"
             />
-          </Grid>
+          </StyledSection>
 
-          <Grid item xs={12} className={classes.section}>
-            <Typography variant="subtitle2" className={classes.label}>
+          <StyledSection>
+            <StyledLabel variant="subtitle2">
               Description
-            </Typography>
-            <Typography className={classes.value}>
+            </StyledLabel>
+            <StyledValue>
               {alert.description}
-            </Typography>
-          </Grid>
+            </StyledValue>
+          </StyledSection>
 
-          <Grid item xs={12} sm={6} className={classes.section}>
-            <Typography variant="subtitle2" className={classes.label}>
+          <StyledSection>
+            <StyledLabel variant="subtitle2">
               Source IP
-            </Typography>
-            <Typography className={classes.value}>{alert.sourceIp}</Typography>
-          </Grid>
+            </StyledLabel>
+            <StyledValue>
+              {alert.sourceIp}
+            </StyledValue>
+          </StyledSection>
 
-          <Grid item xs={12} sm={6} className={classes.section}>
-            <Typography variant="subtitle2" className={classes.label}>
+          <StyledSection>
+            <StyledLabel variant="subtitle2">
               Location
-            </Typography>
-            <Typography className={classes.value}>
+            </StyledLabel>
+            <StyledValue>
               {alert.location ? (
                 `${alert.location.city}, ${alert.location.country}`
               ) : (
                 'Unknown'
               )}
-            </Typography>
-          </Grid>
+            </StyledValue>
+          </StyledSection>
 
-          <Grid item xs={12} className={classes.section}>
-            <Typography variant="subtitle2" className={classes.label}>
+          <StyledSection>
+            <StyledLabel variant="subtitle2">
               Affected Resources
-            </Typography>
+            </StyledLabel>
             {alert.affectedResources?.map((resource, index) => (
-              <Chip
+              <StyledChip
                 key={index}
                 label={resource}
                 size="small"
-                className={classes.chip}
               />
             ))}
-          </Grid>
+          </StyledSection>
 
-          <Grid item xs={12} className={classes.section}>
-            <Typography variant="subtitle2" className={classes.label}>
+          <StyledSection>
+            <StyledLabel variant="subtitle2">
               Raw Data
-            </Typography>
+            </StyledLabel>
             <pre style={{ overflow: 'auto' }}>
               {JSON.stringify(alert.rawData || alert, null, 2)}
             </pre>
-          </Grid>
+          </StyledSection>
         </Grid>
       </DialogContent>
       <DialogActions>
         {alert.status !== 'acknowledged' && (
-          <Button
-            onClick={() => onAcknowledge(alert._id)}
-            color="primary"
-          >
+          <Button onClick={() => onAcknowledge(alert._id)} color="primary">
             Acknowledge
           </Button>
         )}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Grid, Paper, Typography, makeStyles } from '@material-ui/core';
+import { Grid, Paper, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { Line, Pie } from 'react-chartjs-2';
 import axios from 'axios';
 import { API_URL } from '../config';
@@ -26,18 +27,17 @@ ChartJS.register(
   Legend
 );
 
-const useStyles = makeStyles((theme) => ({
-  paper: {
-    padding: theme.spacing(3),
-    height: '100%',
-  },
-  chart: {
-    marginTop: theme.spacing(2),
-  }
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(3),
+  height: '100%',
+}));
+
+const ChartContainer = styled('div')(({ theme }) => ({
+  marginTop: theme.spacing(3),
+  padding: theme.spacing(2),
 }));
 
 function Dashboard() {
-  const classes = useStyles();
   const [stats, setStats] = useState({
     totalLogs: 0,
     anomalies: 0,
@@ -90,21 +90,20 @@ function Dashboard() {
 
   return (
     <Grid container spacing={3}>
-      {/* Summary Cards */}
       <Grid item xs={12} md={4}>
-        <Paper className={classes.paper}>
+        <StyledPaper>
           <Typography variant="h6">Total Logs</Typography>
           <Typography variant="h3">{stats.totalLogs}</Typography>
-        </Paper>
+        </StyledPaper>
       </Grid>
       <Grid item xs={12} md={4}>
-        <Paper className={classes.paper}>
+        <Paper>
           <Typography variant="h6">Anomalies Detected</Typography>
           <Typography variant="h3">{stats.anomalies}</Typography>
         </Paper>
       </Grid>
       <Grid item xs={12} md={4}>
-        <Paper className={classes.paper}>
+        <Paper>
           <Typography variant="h6">Alert Rate</Typography>
           <Typography variant="h3">
             {stats.totalLogs ? ((stats.anomalies / stats.totalLogs) * 100).toFixed(1) : 0}%
@@ -114,17 +113,17 @@ function Dashboard() {
 
       {/* Charts */}
       <Grid item xs={12} md={6}>
-        <Paper className={classes.paper}>
+        <Paper>
           <Typography variant="h6">Anomaly Distribution</Typography>
-          <div className={classes.chart}>
+          <div>
             <Pie data={anomalyChartData} />
           </div>
         </Paper>
       </Grid>
       <Grid item xs={12} md={6}>
-        <Paper className={classes.paper}>
+        <Paper>
           <Typography variant="h6">Anomalies Trend</Typography>
-          <div className={classes.chart}>
+          <div>
             <Line data={timeSeriesData} />
           </div>
         </Paper>

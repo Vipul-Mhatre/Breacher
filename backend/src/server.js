@@ -9,6 +9,7 @@ const { initSocket } = require('./config/socket');
 const routes = require('./routes');
 const config = require('./config/config');
 const connectDB = require('./database/mongodb');
+const blockchain = require('./blockchain/Blockchain');
 
 const app = express();
 
@@ -31,14 +32,23 @@ app.use((err, req, res, next) => {
   });
 });
 
-// Connect to MongoDB
-connectDB();
+async function startServer() {
+  try {
+    await connectDB();
+    await blockchain.initialize();
+    
+    // Start server
+    const port = config.app.port;
+    const server = app.listen(port, () => {
+      console.log(`Server running on port ${port}`);
+    });
 
-// Start server
-const port = config.app.port;
-const server = app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+    // Initialize Socket.io
+    initSocket(server);
+  } catch (error) {
+    console.error('Error starting server:', error);
+    process.exit(1);
+  }
+}
 
-// Initialize Socket.io
-initSocket(server); 
+startServer(); 

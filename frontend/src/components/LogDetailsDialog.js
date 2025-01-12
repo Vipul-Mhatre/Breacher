@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogTitle,
@@ -8,104 +8,133 @@ import {
   Typography,
   Grid,
   Chip,
-  makeStyles,
-} from '@material-ui/core';
+  styled,
+} from '@mui/material';
+import api from '../services/api';
 
-const useStyles = makeStyles((theme) => ({
-  section: {
-    marginBottom: theme.spacing(2),
-  },
-  label: {
-    fontWeight: 'bold',
-    color: theme.palette.text.secondary,
-  },
-  value: {
-    wordBreak: 'break-all',
-  },
-  chip: {
-    margin: theme.spacing(0.5),
-  },
+const StyledSection = styled('div')(({ theme }) => ({
+  marginBottom: theme.spacing(2),
+}));
+
+const StyledLabel = styled(Typography)(({ theme }) => ({
+  fontWeight: 'bold',
+  color: theme.palette.text.secondary,
+}));
+
+const StyledValue = styled('div')({
+  wordBreak: 'break-all',
+});
+
+const StyledChip = styled(Chip)(({ theme }) => ({
+  margin: theme.spacing(0.5),
 }));
 
 function LogDetailsDialog({ log, onClose }) {
-  const classes = useStyles();
+  const [verificationStatus, setVerificationStatus] = useState(null);
+
+  useEffect(() => {
+    const verifyLog = async () => {
+      try {
+        const response = await api.get(`/logs/${log._id}/verify`);
+        setVerificationStatus(response.data.verified);
+      } catch (error) {
+        console.error('Error verifying log:', error);
+        setVerificationStatus(false);
+      }
+    };
+    
+    verifyLog();
+  }, [log._id]);
 
   return (
     <Dialog open={true} onClose={onClose} maxWidth="md" fullWidth>
       <DialogTitle>Log Details</DialogTitle>
       <DialogContent>
         <Grid container spacing={2}>
-          <Grid item xs={12} className={classes.section}>
-            <Typography variant="subtitle2" className={classes.label}>
+          <Grid item xs={12} component={StyledSection}>
+            <StyledLabel variant="subtitle2">
               Timestamp
-            </Typography>
-            <Typography className={classes.value}>
+            </StyledLabel>
+            <StyledValue>
               {new Date(log.timestamp).toLocaleString()}
-            </Typography>
+            </StyledValue>
           </Grid>
 
-          <Grid item xs={12} sm={6} className={classes.section}>
-            <Typography variant="subtitle2" className={classes.label}>
+          <Grid item xs={12} sm={6} component={StyledSection}>
+            <StyledLabel variant="subtitle2">
               Type
-            </Typography>
-            <Typography className={classes.value}>{log.type}</Typography>
+            </StyledLabel>
+            <StyledValue>
+              {log.type}
+            </StyledValue>
           </Grid>
 
-          <Grid item xs={12} sm={6} className={classes.section}>
-            <Typography variant="subtitle2" className={classes.label}>
+          <Grid item xs={12} sm={6} component={StyledSection}>
+            <StyledLabel variant="subtitle2">
               Status
-            </Typography>
-            <Chip
+            </StyledLabel>
+            <StyledChip
               label={log.isAnomaly ? 'Anomaly' : 'Normal'}
               color={log.isAnomaly ? 'secondary' : 'default'}
               size="small"
             />
           </Grid>
 
-          <Grid item xs={12} sm={6} className={classes.section}>
-            <Typography variant="subtitle2" className={classes.label}>
+          <Grid item xs={12} sm={6} component={StyledSection}>
+            <StyledLabel variant="subtitle2">
               IP Address
-            </Typography>
-            <Typography className={classes.value}>{log.ip}</Typography>
+            </StyledLabel>
+            <StyledValue>
+              {log.ip}
+            </StyledValue>
           </Grid>
 
-          <Grid item xs={12} sm={6} className={classes.section}>
-            <Typography variant="subtitle2" className={classes.label}>
+          <Grid item xs={12} sm={6} component={StyledSection}>
+            <StyledLabel variant="subtitle2">
               Location
-            </Typography>
-            <Typography className={classes.value}>
+            </StyledLabel>
+            <StyledValue>
               {log.location ? (
                 `${log.location.city}, ${log.location.country}`
               ) : (
                 'Unknown'
               )}
-            </Typography>
+            </StyledValue>
           </Grid>
 
           {log.isAnomaly && (
-            <Grid item xs={12} className={classes.section}>
-              <Typography variant="subtitle2" className={classes.label}>
+            <Grid item xs={12} component={StyledSection}>
+              <StyledLabel variant="subtitle2">
                 Anomaly Details
-              </Typography>
+              </StyledLabel>
               {log.anomalies.map((anomaly, index) => (
-                <Chip
+                <StyledChip
                   key={index}
                   label={anomaly}
                   color="secondary"
                   size="small"
-                  className={classes.chip}
                 />
               ))}
             </Grid>
           )}
 
-          <Grid item xs={12} className={classes.section}>
-            <Typography variant="subtitle2" className={classes.label}>
+          <Grid item xs={12} component={StyledSection}>
+            <StyledLabel variant="subtitle2">
               Raw Data
-            </Typography>
+            </StyledLabel>
             <pre style={{ overflow: 'auto' }}>
               {JSON.stringify(log, null, 2)}
             </pre>
+          </Grid>
+
+          <Grid item xs={12} component={StyledSection}>
+            <StyledLabel variant="subtitle2">
+              Blockchain Verification
+            </StyledLabel>
+            <Chip
+              label={verificationStatus ? "Verified" : "Unverified"}
+              color={verificationStatus ? "success" : "error"}
+            />
           </Grid>
         </Grid>
       </DialogContent>

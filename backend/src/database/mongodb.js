@@ -1,21 +1,25 @@
-const mongoose = require('mongoose');
-const config = require('../config/config');
+const { initStorage } = require('./jsonStorage');
+const defaultUsers = require('../config/defaultUsers');
+const { db } = require('./jsonStorage');
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(config.mongodb.uri, {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    });
-
-    console.log(`MongoDB Connected: ${conn.connection.host}`);
+    // Initialize JSON storage
+    await initStorage();
+    console.log('JSON Storage initialized');
     
-    // Initialize models
-    require('../models');
+    // Initialize default users if they don't exist
+    for (const user of defaultUsers) {
+      const existingUser = await db.users.findOne({ email: user.email });
+      if (!existingUser) {
+        await db.users.create(user);
+        console.log(`Created default user: ${user.email}`);
+      }
+    }
     
-    return conn;
+    return true;
   } catch (error) {
-    console.error(`MongoDB Connection Error: ${error.message}`);
+    console.error(`Storage Connection Error: ${error.message}`);
     process.exit(1);
   }
 };

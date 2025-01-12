@@ -1,18 +1,10 @@
 const express = require('express');
 const router = express.Router();
-const authRoutes = require('./auth.routes');
-const logRoutes = require('./logs');
-const userRoutes = require('./users');
-const { protect } = require('../middleware/auth');
+const authRoutes = require('./authRoutes');
+const logRoutes = require('./logRoutes');
 
 // Mount routes
 router.use('/auth', authRoutes);
-router.use('/logs', protect, logRoutes);
-router.use('/users', protect, userRoutes);
-
-// Health check route
-router.get('/health', (req, res) => {
-  res.json({ status: 'ok' });
-});
+router.use('/logs', logRoutes);
 
 module.exports = router; 

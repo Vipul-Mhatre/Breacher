@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { db } = require('../database/jsonStorage');
 const config = require('../config/config');
 
 exports.protect = async (req, res, next) => {
@@ -15,20 +15,22 @@ exports.protect = async (req, res, next) => {
     }
 
     // Verify token
-    const decoded = jwt.verify(token, config.app.jwtSecret);
+    const decoded = jwt.verify(token, config.app.jwtSecret || 'your-secret-key');
 
-    // Get user from token
-    const user = await User.findById(decoded.id);
+    // Get user from storage
+    const user = await db.users.findOne({ _id: decoded.id });
+
     if (!user) {
       return res.status(401).json({
         status: 'error',
-        message: 'User not found'
+        message: 'User no longer exists'
       });
     }
 
     req.user = user;
     next();
   } catch (error) {
+    console.error('Auth middleware error:', error);
     res.status(401).json({
       status: 'error',
       message: 'Not authorized to access this route'

@@ -1,10 +1,12 @@
 import { Subject } from 'rxjs';
 
-const subject = new Subject();
+const notificationSubject = new Subject();
 
 export const NotificationService = {
-  notify: (message, type = 'info') => subject.next({ message, type }),
-  onNotification: () => subject.asObservable(),
+  notify: (message, type = 'info') => {
+    notificationSubject.next({ message, type });
+  },
+  onNotification: () => notificationSubject.asObservable(),
   success: (message) => NotificationService.notify(message, 'success'),
   error: (message) => NotificationService.notify(message, 'error'),
   warning: (message) => NotificationService.notify(message, 'warning'),
