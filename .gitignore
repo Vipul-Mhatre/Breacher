@@ -43,3 +43,11 @@ Thumbs.db
 # Sawtooth
 /sawtooth/keys/
 /sawtooth/data/
+
+/env/
+/venv/
+env/
+venv/
+.env/
+.venv/
+env

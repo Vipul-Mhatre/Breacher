@@ -1,14 +1,32 @@
-import { Subject } from 'rxjs';
+class NotificationService {
+  static listeners = [];
 
-const notificationSubject = new Subject();
+  static subscribe(listener) {
+    this.listeners.push(listener);
+    return () => {
+      this.listeners = this.listeners.filter(l => l !== listener);
+    };
+  }
 
-export const NotificationService = {
-  notify: (message, type = 'info') => {
-    notificationSubject.next({ message, type });
-  },
-  onNotification: () => notificationSubject.asObservable(),
-  success: (message) => NotificationService.notify(message, 'success'),
-  error: (message) => NotificationService.notify(message, 'error'),
-  warning: (message) => NotificationService.notify(message, 'warning'),
-  info: (message) => NotificationService.notify(message, 'info'),
-}; 
+  static notify(message, type = 'info') {
+    this.listeners.forEach(listener => listener({ message, type }));
+  }
+
+  static success(message) {
+    this.notify(message, 'success');
+  }
+
+  static error(message) {
+    this.notify(message, 'error');
+  }
+
+  static warning(message) {
+    this.notify(message, 'warning');
+  }
+
+  static info(message) {
+    this.notify(message, 'info');
+  }
+}
+
+export { NotificationService }; 

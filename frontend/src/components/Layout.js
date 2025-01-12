@@ -17,6 +17,7 @@ import {
   NotificationImportant as AlertsIcon,
   Settings as SettingsIcon,
   ExitToApp as LogoutIcon,
+  People as PeopleIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -52,6 +53,12 @@ const menuItems = [
   { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
   { text: 'Logs', icon: <LogsIcon />, path: '/logs' },
   { text: 'Alerts', icon: <AlertsIcon />, path: '/alerts' },
+  { 
+    text: 'User Management', 
+    icon: <PeopleIcon />, 
+    path: '/users',
+    adminOnly: true 
+  },
   { text: 'Settings', icon: <SettingsIcon />, path: '/settings' },
 ];
 
@@ -83,17 +90,19 @@ function Layout({ children }) {
       <StyledDrawer variant="permanent" open>
         <StyledToolbarSpacer />
         <List>
-          {menuItems.map((item) => (
-            <ListItem
-              button
-              key={item.text}
-              selected={location.pathname === item.path}
-              onClick={() => navigate(item.path)}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItem>
-          ))}
+          {menuItems
+            .filter(item => !item.adminOnly || user?.role === 'admin')
+            .map((item) => (
+              <ListItem
+                button
+                key={item.text}
+                selected={location.pathname === item.path}
+                onClick={() => navigate(item.path)}
+              >
+                <ListItemIcon>{item.icon}</ListItemIcon>
+                <ListItemText primary={item.text} />
+              </ListItem>
+            ))}
         </List>
       </StyledDrawer>
       <StyledMain>
