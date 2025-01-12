@@ -1,13 +1,10 @@
-const mongoose = require('mongoose');
-const LogSchema = require('./schemas/LogSchema');
-const UserSchema = require('./schemas/UserSchema');
-const AlertSchema = require('./schemas/AlertSchema');
+const { db } = require('../database/jsonStorage');
 
-// Create models only if they haven't been compiled yet
+// Replace mongoose models with JSON storage
 const models = {
-  Log: mongoose.models.Log || mongoose.model('Log', LogSchema),
-  User: mongoose.models.User || mongoose.model('User', UserSchema),
-  Alert: mongoose.models.Alert || mongoose.model('Alert', AlertSchema)
+  Log: db.logs,
+  User: db.users,
+  Alert: db.logs // We'll use the same storage for logs and alerts
 };
 
 module.exports = models; 

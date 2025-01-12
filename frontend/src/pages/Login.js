@@ -6,32 +6,41 @@ import {
   TextField,
   Button,
   Typography,
-  makeStyles,
-} from '@material-ui/core';
-import { Alert } from '@material-ui/lab';
+  Alert,
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
 import { useAuth } from '../contexts/AuthContext';
 
-const useStyles = makeStyles((theme) => ({
-  container: {
-    height: '100vh',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  paper: {
-    padding: theme.spacing(4),
-    width: '100%',
-    maxWidth: 400,
-  },
-  form: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: theme.spacing(2),
-  },
+const LoginContainer = styled('div')(({ theme }) => ({
+  minHeight: '100vh',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  padding: theme.spacing(2),
+}));
+
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(4),
+  width: '100%',
+  maxWidth: 400,
+}));
+
+const StyledForm = styled('form')(({ theme }) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  gap: theme.spacing(2),
+}));
+
+const LoginForm = styled('form')(({ theme }) => ({
+  width: '100%',
+  maxWidth: '400px',
+  padding: theme.spacing(3),
+  backgroundColor: theme.palette.background.paper,
+  borderRadius: theme.shape.borderRadius,
+  boxShadow: theme.shadows[1],
 }));
 
 function Login() {
-  const classes = useStyles();
   const navigate = useNavigate();
   const { login } = useAuth();
   const [email, setEmail] = useState('');
@@ -54,8 +63,8 @@ function Login() {
   };
 
   return (
-    <Container className={classes.container} maxWidth="sm">
-      <Paper className={classes.paper} elevation={3}>
+    <LoginContainer>
+      <StyledPaper elevation={3}>
         <Typography variant="h5" component="h1" gutterBottom align="center">
           Login
         </Typography>
@@ -64,7 +73,7 @@ function Login() {
             {error}
           </Alert>
         )}
-        <form className={classes.form} onSubmit={handleSubmit}>
+        <LoginForm onSubmit={handleSubmit}>
           <TextField
             label="Email"
             type="email"
@@ -88,9 +97,9 @@ function Login() {
           >
             {loading ? 'Logging in...' : 'Login'}
           </Button>
-        </form>
-      </Paper>
-    </Container>
+        </LoginForm>
+      </StyledPaper>
+    </LoginContainer>
   );
 }
 

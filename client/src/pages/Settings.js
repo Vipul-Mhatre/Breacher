@@ -1,1 +1,0 @@
-// Settings page for system configuration 

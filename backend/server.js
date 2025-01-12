@@ -5,6 +5,7 @@ const socketIO = require('socket.io');
 const { createServer } = require('http');
 const connectDB = require('./src/database/mongodb');
 require('dotenv').config();
+const routes = require('./src/routes');
 
 const app = express();
 const httpServer = createServer(app);
@@ -23,7 +24,10 @@ const io = socketIO(httpServer, {
 app.set('io', io);
 
 // Basic middleware
-app.use(cors());
+app.use(cors({
+  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  credentials: true
+}));
 app.use(express.json());
 
 // Security middleware (with try-catch to handle missing modules)
@@ -46,9 +50,7 @@ try {
 }
 
 // Routes
-app.use('/api/auth', require('./src/routes/auth.routes'));
-app.use('/api/logs', require('./src/routes/logs.routes'));
-app.use('/api/alerts', require('./src/routes/alerts.routes'));
+app.use('/api', routes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

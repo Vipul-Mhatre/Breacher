@@ -1,5 +1,5 @@
 import React from 'react';
-import { makeStyles } from '@material-ui/core/styles';
+import { styled } from '@mui/material/styles';
 import {
   AppBar,
   Drawer,
@@ -10,38 +10,42 @@ import {
   ListItemIcon,
   ListItemText,
   IconButton,
-} from '@material-ui/core';
+} from '@mui/material';
 import {
   Dashboard as DashboardIcon,
   Assessment as LogsIcon,
   NotificationImportant as AlertsIcon,
   Settings as SettingsIcon,
   ExitToApp as LogoutIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const drawerWidth = 240;
 
-const useStyles = makeStyles((theme) => ({
-  root: {
-    display: 'flex',
-  },
-  appBar: {
-    zIndex: theme.zIndex.drawer + 1,
-  },
-  drawer: {
+const StyledRoot = styled('div')(({ theme }) => ({
+  display: 'flex',
+}));
+
+const StyledAppBar = styled(AppBar)(({ theme }) => ({
+  zIndex: theme.zIndex.drawer + 1,
+}));
+
+const StyledDrawer = styled(Drawer)(({ theme }) => ({
+  width: drawerWidth,
+  flexShrink: 0,
+  '& .MuiDrawer-paper': {
     width: drawerWidth,
-    flexShrink: 0,
   },
-  drawerPaper: {
-    width: drawerWidth,
-  },
-  content: {
-    flexGrow: 1,
-    padding: theme.spacing(3),
-  },
-  toolbar: theme.mixins.toolbar,
+}));
+
+const StyledMain = styled('main')(({ theme }) => ({
+  flexGrow: 1,
+  padding: theme.spacing(3),
+}));
+
+const StyledToolbarSpacer = styled('div')(({ theme }) => ({
+  ...theme.mixins.toolbar,
 }));
 
 const menuItems = [
@@ -52,7 +56,6 @@ const menuItems = [
 ];
 
 function Layout({ children }) {
-  const classes = useStyles();
   const navigate = useNavigate();
   const location = useLocation();
   const { logout, user } = useAuth();
@@ -63,8 +66,8 @@ function Layout({ children }) {
   };
 
   return (
-    <div className={classes.root}>
-      <AppBar position="fixed" className={classes.appBar}>
+    <StyledRoot>
+      <StyledAppBar position="fixed">
         <Toolbar>
           <Typography variant="h6" noWrap style={{ flexGrow: 1 }}>
             AI Breach Detection System
@@ -76,15 +79,9 @@ function Layout({ children }) {
             <LogoutIcon />
           </IconButton>
         </Toolbar>
-      </AppBar>
-      <Drawer
-        className={classes.drawer}
-        variant="permanent"
-        classes={{
-          paper: classes.drawerPaper,
-        }}
-      >
-        <div className={classes.toolbar} />
+      </StyledAppBar>
+      <StyledDrawer variant="permanent" open>
+        <StyledToolbarSpacer />
         <List>
           {menuItems.map((item) => (
             <ListItem
@@ -98,12 +95,12 @@ function Layout({ children }) {
             </ListItem>
           ))}
         </List>
-      </Drawer>
-      <main className={classes.content}>
-        <div className={classes.toolbar} />
+      </StyledDrawer>
+      <StyledMain>
+        <StyledToolbarSpacer />
         {children}
-      </main>
-    </div>
+      </StyledMain>
+    </StyledRoot>
   );
 }
 

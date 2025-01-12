@@ -9,44 +9,38 @@ import {
   ListItemSecondaryAction,
   IconButton,
   Chip,
-  makeStyles,
-  Button,
-} from '@material-ui/core';
+  TableCell,
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
 import {
   Info as InfoIcon,
   Check as CheckIcon,
   NotificationsActive as AlertIcon,
-} from '@material-ui/icons';
+} from '@mui/icons-material';
 import axios from 'axios';
 import { API_URL, SOCKET_URL } from '../config';
 import io from 'socket.io-client';
 import AlertDetailsDialog from '../components/AlertDetailsDialog';
 
-const useStyles = makeStyles((theme) => ({
-  root: {
-    flexGrow: 1,
-  },
-  paper: {
-    padding: theme.spacing(2),
-    height: '100%',
-  },
-  alertItem: {
-    marginBottom: theme.spacing(1),
-    borderLeft: `4px solid ${theme.palette.error.main}`,
-    '&.acknowledged': {
-      borderLeft: `4px solid ${theme.palette.success.main}`,
-    },
-  },
-  severity: {
-    marginRight: theme.spacing(1),
-  },
-  timestamp: {
-    color: theme.palette.text.secondary,
-  },
+const Root = styled('div')(({ theme }) => ({
+  padding: theme.spacing(3),
+}));
+
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(2),
+  height: '100%',
+}));
+
+const StyledAlertItem = styled(ListItem)(({ theme, acknowledged }) => ({
+  marginBottom: theme.spacing(1),
+  borderLeft: `4px solid ${acknowledged ? theme.palette.success.main : theme.palette.error.main}`,
+}));
+
+const StyledTimestamp = styled(Typography)(({ theme }) => ({
+  color: theme.palette.text.secondary,
 }));
 
 function Alerts() {
-  const classes = useStyles();
   const [alerts, setAlerts] = useState([]);
   const [selectedAlert, setSelectedAlert] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -102,21 +96,19 @@ function Alerts() {
   };
 
   return (
-    <div className={classes.root}>
+    <Root>
       <Grid container spacing={3}>
         <Grid item xs={12}>
-          <Paper className={classes.paper}>
+          <StyledPaper>
             <Typography variant="h6" gutterBottom>
               <AlertIcon color="error" style={{ marginRight: 8 }} />
               Active Alerts
             </Typography>
             <List>
               {alerts.map((alert) => (
-                <ListItem
+                <StyledAlertItem
                   key={alert._id}
-                  className={`${classes.alertItem} ${
-                    alert.status === 'acknowledged' ? 'acknowledged' : ''
-                  }`}
+                  acknowledged={alert.status === 'acknowledged'}
                   component={Paper}
                   variant="outlined"
                 >
@@ -127,16 +119,15 @@ function Alerts() {
                           size="small"
                           label={alert.severity}
                           color={getSeverityColor(alert.severity)}
-                          className={classes.severity}
                         />
                         {alert.type}
                       </>
                     }
                     secondary={
                       <>
-                        <span className={classes.timestamp}>
+                        <StyledTimestamp>
                           {new Date(alert.timestamp).toLocaleString()}
-                        </span>
+                        </StyledTimestamp>
                         <br />
                         {alert.description}
                       </>
@@ -162,10 +153,10 @@ function Alerts() {
                       </IconButton>
                     )}
                   </ListItemSecondaryAction>
-                </ListItem>
+                </StyledAlertItem>
               ))}
             </List>
-          </Paper>
+          </StyledPaper>
         </Grid>
       </Grid>
 
@@ -176,7 +167,7 @@ function Alerts() {
           onAcknowledge={handleAcknowledge}
         />
       )}
-    </div>
+    </Root>
   );
 }
 

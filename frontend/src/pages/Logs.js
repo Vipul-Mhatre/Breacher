@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Paper,
   Table,
@@ -10,37 +10,36 @@ import {
   TablePagination,
   TextField,
   Grid,
-  makeStyles,
   IconButton,
   Chip,
-} from '@material-ui/core';
-import { Info as InfoIcon } from '@material-ui/icons';
+  Typography,
+} from '@mui/material';
+import { styled } from '@mui/material/styles';
+import { Info as InfoIcon } from '@mui/icons-material';
 import axios from 'axios';
 import { API_URL } from '../config';
 import LogDetailsDialog from '../components/LogDetailsDialog';
+import { TableContainer as MuiTableContainer } from '@mui/material';
 
-const useStyles = makeStyles((theme) => ({
-  root: {
-    width: '100%',
-  },
-  paper: {
-    width: '100%',
-    marginBottom: theme.spacing(2),
-  },
-  table: {
-    minWidth: 750,
-  },
-  filters: {
-    padding: theme.spacing(2),
-    marginBottom: theme.spacing(2),
-  },
-  chip: {
-    margin: theme.spacing(0.5),
-  },
+const Root = styled('div')(({ theme }) => ({
+  padding: theme.spacing(3),
+}));
+
+const StyledPaper = styled(Paper)(({ theme }) => ({
+  width: '100%',
+  marginBottom: theme.spacing(2),
+}));
+
+const FilterContainer = styled(Paper)(({ theme }) => ({
+  padding: theme.spacing(2),
+  marginBottom: theme.spacing(2),
+}));
+
+const StyledTableContainer = styled('div')(({ theme }) => ({
+  marginTop: theme.spacing(2),
 }));
 
 function Logs() {
-  const classes = useStyles();
   const [logs, setLogs] = useState([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
@@ -53,11 +52,7 @@ function Logs() {
   const [selectedLog, setSelectedLog] = useState(null);
   const [total, setTotal] = useState(0);
 
-  useEffect(() => {
-    fetchLogs();
-  }, [page, rowsPerPage, filters]);
-
-  const fetchLogs = async () => {
+  const fetchLogs = useCallback(async () => {
     try {
       const response = await axios.get(`${API_URL}/logs`, {
         params: {
@@ -71,7 +66,11 @@ function Logs() {
     } catch (error) {
       console.error('Error fetching logs:', error);
     }
-  };
+  }, [page, rowsPerPage, filters]);
+
+  useEffect(() => {
+    fetchLogs();
+  }, [fetchLogs]);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -91,8 +90,11 @@ function Logs() {
   };
 
   return (
-    <div className={classes.root}>
-      <Paper className={classes.filters}>
+    <Root>
+      <Typography variant="h6" gutterBottom>
+        System Logs
+      </Typography>
+      <FilterContainer>
         <Grid container spacing={2}>
           <Grid item xs={12} sm={3}>
             <TextField
@@ -134,57 +136,61 @@ function Logs() {
             </TextField>
           </Grid>
         </Grid>
-      </Paper>
+      </FilterContainer>
 
-      <TableContainer component={Paper}>
-        <Table className={classes.table}>
-          <TableHead>
-            <TableRow>
-              <TableCell>Timestamp</TableCell>
-              <TableCell>Type</TableCell>
-              <TableCell>IP Address</TableCell>
-              <TableCell>Status</TableCell>
-              <TableCell>Actions</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {logs.map((log) => (
-              <TableRow key={log._id}>
-                <TableCell>
-                  {new Date(log.timestamp).toLocaleString()}
-                </TableCell>
-                <TableCell>{log.type}</TableCell>
-                <TableCell>{log.ip}</TableCell>
-                <TableCell>
-                  <Chip
-                    label={log.isAnomaly ? 'Anomaly' : 'Normal'}
-                    color={log.isAnomaly ? 'secondary' : 'default'}
-                    size="small"
-                  />
-                </TableCell>
-                <TableCell>
-                  <IconButton
-                    size="small"
-                    onClick={() => setSelectedLog(log)}
-                  >
-                    <InfoIcon />
-                  </IconButton>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </TableContainer>
+      <StyledPaper>
+        <StyledTableContainer>
+          <MuiTableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell>Timestamp</TableCell>
+                  <TableCell>Type</TableCell>
+                  <TableCell>IP Address</TableCell>
+                  <TableCell>Status</TableCell>
+                  <TableCell>Actions</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {logs.map((log) => (
+                  <TableRow key={log._id}>
+                    <TableCell>
+                      {new Date(log.timestamp).toLocaleString()}
+                    </TableCell>
+                    <TableCell>{log.type}</TableCell>
+                    <TableCell>{log.ip}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={log.isAnomaly ? 'Anomaly' : 'Normal'}
+                        color={log.isAnomaly ? 'secondary' : 'default'}
+                        size="small"
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <IconButton
+                        size="small"
+                        onClick={() => setSelectedLog(log)}
+                      >
+                        <InfoIcon />
+                      </IconButton>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </MuiTableContainer>
+        </StyledTableContainer>
 
-      <TablePagination
-        rowsPerPageOptions={[10, 25, 50]}
-        component="div"
-        count={total}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-      />
+        <TablePagination
+          rowsPerPageOptions={[10, 25, 50]}
+          component="div"
+          count={total}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
+      </StyledPaper>
 
       {selectedLog && (
         <LogDetailsDialog
@@ -192,7 +198,7 @@ function Logs() {
           onClose={() => setSelectedLog(null)}
         />
       )}
-    </div>
+    </Root>
   );
 }
 

@@ -1,53 +1,74 @@
-const { Log } = require('../models');
-const BlockchainService = require('./BlockchainService');
+const { db } = require('../models');
+const blockchain = require('../blockchain/Blockchain');
 
 class LogService {
-  async createLog(logData) {
+  static async createLog(logData) {
     try {
-      // Save to MongoDB
-      const log = new Log(logData);
-      await log.save();
+      // Save to JSON storage
+      const log = {
+        ...logData,
+        timestamp: new Date(),
+        isAnomaly: false
+      };
+      const savedLog = await db.logs.create(log);
 
-      // Submit to blockchain
-      await BlockchainService.submitTransaction({
-        type: 'log',
-        data: {
-          id: log._id.toString(),
-          ...logData
-        }
-      });
+      // Add to blockchain
+      await blockchain.addLog(savedLog);
 
-      return log;
+      return savedLog;
     } catch (error) {
       console.error('Error creating log:', error);
       throw error;
     }
   }
 
-  async getLogs(query, page = 1, limit = 10) {
+  static async verifyLogIntegrity(logId) {
     try {
-      const logs = await Log.find(query)
-        .sort({ timestamp: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit);
-
-      const total = await Log.countDocuments(query);
-
-      return {
-        logs,
-        total,
-        page,
-        pages: Math.ceil(total / limit)
-      };
+      // Verify log exists in blockchain
+      const verified = await blockchain.verifyLog(logId);
+      
+      if (verified) {
+        // Get log from JSON storage
+        const storedLog = await db.logs.findOne({ _id: logId });
+        
+        // Get block containing the log
+        const block = blockchain.getBlockByLogId(logId);
+        
+        if (block) {
+          // Find log in block
+          const blockLog = block.data.find(log => log._id === logId);
+          
+          // Compare stored log with blockchain log
+          return JSON.stringify(storedLog) === JSON.stringify(blockLog);
+        }
+      }
+      
+      return false;
     } catch (error) {
-      console.error('Error fetching logs:', error);
-      throw error;
+      console.error('Error verifying log integrity:', error);
+      return false;
     }
   }
 
-  async getAnomalies(page = 1, limit = 10) {
-    return this.getLogs({ isAnomaly: true }, page, limit);
+  static async getLogs(page = 1, limit = 10, filters = {}) {
+    try {
+      const logs = await db.logs.find(filters);
+      
+      // Manual pagination
+      const start = (page - 1) * limit;
+      const paginatedLogs = logs.slice(start, start + limit);
+      
+      return {
+        logs: paginatedLogs,
+        total: logs.length,
+        page: page,
+        pages: Math.ceil(logs.length / limit)
+      };
+    } catch (error) {
+      console.error('Error getting logs:', error);
+      throw error;
+    }
   }
 }
 
-module.exports = new LogService(); 
+module.exports = LogService; 

@@ -1,0 +1,16 @@
+[
+  {
+    "_id": "ho4q0yk3e",
+    "email": "admin@example.com",
+    "password": "admin123",
+    "name": "Admin User",
+    "role": "admin"
+  },
+  {
+    "_id": "259fd6ocp",
+    "email": "analyst@example.com",
+    "password": "analyst123",
+    "name": "Analyst User",
+    "role": "analyst"
+  }
+]

@@ -1,5 +1,6 @@
 const LogService = require('../services/LogService');
 const { io } = require('../config/socket');
+const blockchain = require('../blockchain/Blockchain');
 
 exports.createLog = async (req, res) => {
   try {
@@ -66,6 +67,43 @@ exports.getAnomalies = async (req, res) => {
     res.status(400).json({
       status: 'error',
       message: error.message
+    });
+  }
+};
+
+exports.verifyLog = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const verified = await LogService.verifyLogIntegrity(id);
+    
+    res.json({
+      status: 'success',
+      verified
+    });
+  } catch (error) {
+    console.error('Error verifying log:', error);
+    res.status(500).json({
+      status: 'error',
+      message: 'Error verifying log integrity'
+    });
+  }
+};
+
+exports.getBlockchainStatus = async (req, res) => {
+  try {
+    res.json({
+      status: 'success',
+      data: {
+        chainLength: blockchain.chain.length,
+        isValid: blockchain.isChainValid(),
+        pendingLogs: blockchain.pendingLogs.length,
+        lastBlock: blockchain.getLatestBlock()
+      }
+    });
+  } catch (error) {
+    res.status(500).json({
+      status: 'error',
+      message: 'Error getting blockchain status'
     });
   }
 }; 

@@ -1,1 +1,0 @@
-// Anomaly visualization component 
