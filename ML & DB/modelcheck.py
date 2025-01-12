@@ -35,44 +35,74 @@ def main():
     base_url = initialize_system()
     
     # Sidebar for navigation
-    page = st.sidebar.selectbox("Navigation", ["Real-time Monitoring", "Historical Analysis", "System Statistics"])
+    page = st.sidebar.selectbox("Navigation", ["Real-time Monitoring", "Batch Processing", "Historical Analysis", "System Statistics"])
     
     if page == "Real-time Monitoring":
         st.header("Real-time Threat Detection")
         
         # Input form for manual threat checking
         with st.form("threat_check_form"):
-            col1, col2 = st.columns(2)
+            col1, col2, col3 = st.columns(3)
             with col1:
                 source_ip = st.text_input("Source IP")
                 user_agent = st.text_input("User Agent")
-                attack_severity = st.selectbox("Attack Severity", ["Low", "Medium", "High", "Critical"])
             
             with col2:
                 dest_ip = st.text_input("Destination IP")
-                data_exfiltrated = st.checkbox("Data Exfiltrated")
-                response_action = st.selectbox("Response Action", 
-                    ["Block", "Monitor", "Alert", "Investigate"])
+                attack_type = st.selectbox("Attack Type", [
+                    "Unknown", "Malware", "Phishing", "Insider Threat", 
+                    "Ransomware", "DDoS"
+                ])
+            
+            with col3:
+                attack_severity = st.selectbox("Attack Severity", [
+                    "Low", "Medium", "High", "Critical"
+                ])
+                response_action = st.selectbox("Response Action", [
+                    "Monitor", "Blocked", "Contained", "Eradicated", "Recovered"
+                ])
+            
+            data_exfiltrated = st.checkbox("Data Exfiltrated")
             
             submitted = st.form_submit_button("Check for Threats")
             
             if submitted:
                 try:
-                    # Create a DataFrame with the input data
-                    input_data = pd.DataFrame({
-                        'Source IP': [source_ip],
-                        'Destination IP': [dest_ip],
-                        'Timestamp': [datetime.now()],
-                        'User Agent': [user_agent],
-                        'Attack Severity': [attack_severity],
-                        'Data Exfiltrated': [data_exfiltrated],
-                        'Response Action': [response_action],
-                        'Attack Type': ['Unknown']  # placeholder
-                    })
+                    # Validate IP addresses
+                    try:
+                        ipaddress.ip_address(source_ip)
+                        ipaddress.ip_address(dest_ip)
+                    except ValueError:
+                        st.error("Invalid IP address format")
+                        return
                     
-                    # Detect threats
-                    response = requests.post(f"{base_url}/detect", json=input_data.to_dict(orient='records'))
-                    response.raise_for_status()
+                    # Create input data as a single dictionary (not a list)
+                    input_data = {
+                        'Source IP': source_ip,
+                        'Destination IP': dest_ip,
+                        'Timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+                        'User Agent': user_agent if user_agent else "Unknown",
+                        'Attack Severity': attack_severity,
+                        'Data Exfiltrated': bool(data_exfiltrated),
+                        'Response Action': response_action,
+                        'Attack Type': attack_type
+                    }
+                    
+                    # Log the request data for debugging
+                    st.write("Sending data:", input_data)
+                    
+                    # Send request
+                    response = requests.post(
+                        f"{base_url}/detect",
+                        json=input_data,
+                        headers={'Content-Type': 'application/json'}
+                    )
+                    
+                    if response.status_code != 200:
+                        error_details = response.json()
+                        st.error(f"Server Error: {error_details.get('error', 'Unknown error')}")
+                        return
+                    
                     alerts = response.json()
                     
                     if alerts:
@@ -104,6 +134,78 @@ def main():
         except requests.exceptions.RequestException as req_err:
             st.error(f"Error fetching recent alerts: {str(req_err)}")
     
+    elif page == "Batch Processing":
+        st.header("Batch Threat Detection")
+        
+        # File upload for JSON data
+        uploaded_file = st.file_uploader("Upload JSON file with threat data", type=['json'])
+        
+        # Text area for JSON input
+        json_input = st.text_area(
+            "Or paste JSON data here",
+            height=300,
+            help="Paste JSON array containing threat data"
+        )
+        
+        col1, col2 = st.columns(2)
+        with col1:
+            upload_method = st.radio(
+                "Choose input method",
+                ["File Upload", "Text Input"]
+            )
+        
+        with col2:
+            process_batch = st.button("Process Batch Data")
+        
+        if process_batch:
+            try:
+                if upload_method == "File Upload" and uploaded_file is not None:
+                    batch_data = json.load(uploaded_file)
+                elif upload_method == "Text Input" and json_input:
+                    batch_data = json.loads(json_input)
+                else:
+                    st.warning("Please provide input data either through file upload or text input")
+                    return
+                
+                if not isinstance(batch_data, list):
+                    batch_data = [batch_data]
+                
+                # Process each record
+                with st.spinner('Processing batch data...'):
+                    progress_bar = st.progress(0)
+                    total_records = len(batch_data)
+                    
+                    for i, record in enumerate(batch_data):
+                        try:
+                            response = requests.post(
+                                f"{base_url}/detect",
+                                json=record,
+                                headers={'Content-Type': 'application/json'}
+                            )
+                            
+                            if response.status_code == 200:
+                                alerts = response.json()
+                                if alerts:
+                                    st.warning(f"⚠️ Threats detected in record {i+1}!")
+                                    st.json(alerts)
+                                else:
+                                    st.success(f"✅ No threats detected in record {i+1}")
+                            else:
+                                st.error(f"Error processing record {i+1}: {response.json().get('error', 'Unknown error')}")
+                            
+                            # Update progress
+                            progress_bar.progress((i + 1) / total_records)
+                            
+                        except Exception as e:
+                            st.error(f"Error processing record {i+1}: {str(e)}")
+                    
+                    st.success("Batch processing complete!")
+                    
+            except json.JSONDecodeError:
+                st.error("Invalid JSON format. Please check your input.")
+            except Exception as e:
+                st.error(f"Error processing batch data: {str(e)}")
+
     elif page == "Historical Analysis":
         st.header("Historical Threat Analysis")
         
@@ -168,7 +270,10 @@ def main():
             with col1:
                 st.metric("Total Alerts", len(all_alerts))
             with col2:
-                recent_count = len([alert for alert in all_alerts if datetime.strptime(alert['timestamp'], '%Y-%m-%dT%H:%M:%S.%f') >= datetime.now() - timedelta(hours=24)])
+                recent_count = len([
+                    alert for alert in all_alerts 
+                    if parse_datetime(alert['timestamp']) >= datetime.now() - timedelta(hours=24)
+                ])
                 st.metric("Alerts (24h)", recent_count)
             with col3:
                 high_severity = len([alert for alert in all_alerts if alert['severity'] >= 3])
