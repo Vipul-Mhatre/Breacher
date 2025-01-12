@@ -10,6 +10,7 @@ import {
   ListItemIcon,
   ListItemText,
   IconButton,
+  Button,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -17,6 +18,7 @@ import {
   NotificationImportant as AlertsIcon,
   Settings as SettingsIcon,
   ExitToApp as LogoutIcon,
+  Analytics as AnalyticsIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
@@ -65,6 +67,10 @@ function Layout({ children }) {
     navigate('/login');
   };
 
+  const handleDetailedAnalysis = () => {
+    window.open('http://localhost:5001', '_blank');
+  };
+
   return (
     <StyledRoot>
       <StyledAppBar position="fixed">
@@ -72,6 +78,14 @@ function Layout({ children }) {
           <Typography variant="h6" noWrap style={{ flexGrow: 1 }}>
             AI Breach Detection System
           </Typography>
+          <Button
+            color="inherit"
+            startIcon={<AnalyticsIcon />}
+            onClick={handleDetailedAnalysis}
+            style={{ marginRight: 16 }}
+          >
+            See Detailed Analysis
+          </Button>
           <Typography variant="subtitle1" style={{ marginRight: 16 }}>
             {user?.name}
           </Typography>
