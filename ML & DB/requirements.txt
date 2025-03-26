@@ -1,0 +1,11 @@
+pandas
+numpy
+scikit-learn
+lightgbm
+pymongo
+datetime
+ipaddress
+plotly
+tensorflow
+streamlit
+flask

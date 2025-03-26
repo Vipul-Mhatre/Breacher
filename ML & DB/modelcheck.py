@@ -260,7 +260,6 @@ def main():
     else:  # System Statistics
         st.header("System Statistics")
         
-        # System health metrics
         try:
             response = requests.get(f"{base_url}/alerts")
             response.raise_for_status()

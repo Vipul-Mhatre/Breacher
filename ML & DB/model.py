@@ -24,7 +24,6 @@ import os.path
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 app = Flask(__name__)
-
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, ObjectId):
@@ -73,7 +72,7 @@ class CyberSecurityDetectionSystem:
         """Preprocess the cybersecurity data"""
         # Convert timestamp to unix timestamp
         df["Timestamp"] = pd.to_datetime(df['Timestamp'])
-        df["Timestamp"] = df["Timestamp"].astype(int) // 10**9
+        df["Timestamp"] = df["Timestamp"].astype('int64') // 10**9
         
         # Map severity levels
         severity_mapping = {"Low": 1, "Medium": 2, "High": 3, "Critical": 4}
@@ -518,6 +517,5 @@ def alerts():
     return jsonify(recent_alerts)
 
 if __name__ == "__main__":
-    initialize_system()  # Initialize before running
-    app.run(debug=True, port=5001)
-
+    initialize_system()
+    app.run(debug=True, port=5001, use_reloader=False)
