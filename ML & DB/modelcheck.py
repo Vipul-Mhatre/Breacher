@@ -7,7 +7,6 @@ import ipaddress
 import json
 import requests
 
-# Initialize the detection system
 @st.cache_resource
 def initialize_system():
     return "http://localhost:5001"
@@ -15,10 +14,10 @@ def initialize_system():
 def parse_datetime(dt_string):
     """Parse datetime string in multiple formats"""
     formats = [
-        '%Y-%m-%d %H:%M:%S',     # Standard format
-        '%Y-%m-%dT%H:%M:%S.%f',  # ISO format with microseconds
-        '%Y-%m-%dT%H:%M:%S',     # ISO format without microseconds
-        '%a, %d %b %Y %H:%M:%S GMT'  # RFC format
+        '%Y-%m-%d %H:%M:%S',     
+        '%Y-%m-%dT%H:%M:%S.%f',
+        '%Y-%m-%dT%H:%M:%S',     
+        '%a, %d %b %Y %H:%M:%S GMT'  
     ]
     
     for fmt in formats:
@@ -31,16 +30,12 @@ def parse_datetime(dt_string):
 def main():
     st.title("Cybersecurity Threat Detection Dashboard")
     
-    # Initialize system
     base_url = initialize_system()
-    
-    # Sidebar for navigation
     page = st.sidebar.selectbox("Navigation", ["Real-time Monitoring", "Batch Processing", "Historical Analysis", "System Statistics"])
     
     if page == "Real-time Monitoring":
         st.header("Real-time Threat Detection")
         
-        # Input form for manual threat checking
         with st.form("threat_check_form"):
             col1, col2, col3 = st.columns(3)
             with col1:
@@ -68,7 +63,6 @@ def main():
             
             if submitted:
                 try:
-                    # Validate IP addresses
                     try:
                         ipaddress.ip_address(source_ip)
                         ipaddress.ip_address(dest_ip)
@@ -76,7 +70,6 @@ def main():
                         st.error("Invalid IP address format")
                         return
                     
-                    # Create input data as a single dictionary (not a list)
                     input_data = {
                         'Source IP': source_ip,
                         'Destination IP': dest_ip,
@@ -88,10 +81,8 @@ def main():
                         'Attack Type': attack_type
                     }
                     
-                    # Log the request data for debugging
                     st.write("Sending data:", input_data)
                     
-                    # Send request
                     response = requests.post(
                         f"{base_url}/detect",
                         json=input_data,
@@ -116,7 +107,6 @@ def main():
                 except requests.exceptions.RequestException as e:
                     st.error(f"Error processing input: {str(e)}")
         
-        # Recent alerts section
         st.subheader("Recent Alerts")
         try:
             response = requests.get(f"{base_url}/alerts")
@@ -137,10 +127,8 @@ def main():
     elif page == "Batch Processing":
         st.header("Batch Threat Detection")
         
-        # File upload for JSON data
         uploaded_file = st.file_uploader("Upload JSON file with threat data", type=['json'])
         
-        # Text area for JSON input
         json_input = st.text_area(
             "Or paste JSON data here",
             height=300,
@@ -170,7 +158,6 @@ def main():
                 if not isinstance(batch_data, list):
                     batch_data = [batch_data]
                 
-                # Process each record
                 with st.spinner('Processing batch data...'):
                     progress_bar = st.progress(0)
                     total_records = len(batch_data)
@@ -193,7 +180,6 @@ def main():
                             else:
                                 st.error(f"Error processing record {i+1}: {response.json().get('error', 'Unknown error')}")
                             
-                            # Update progress
                             progress_bar.progress((i + 1) / total_records)
                             
                         except Exception as e:
@@ -209,7 +195,6 @@ def main():
     elif page == "Historical Analysis":
         st.header("Historical Threat Analysis")
         
-        # Date range selector
         col1, col2 = st.columns(2)
         with col1:
             start_date = st.date_input("Start Date", datetime.now() - timedelta(days=7))
@@ -218,20 +203,16 @@ def main():
             end_date = st.date_input("End Date", datetime.now())
             end_datetime = datetime.combine(end_date, datetime.max.time())
         
-        # Load historical data
         try:
             response = requests.get(f"{base_url}/alerts")
             response.raise_for_status()
             historical_alerts = response.json()
             
             if historical_alerts:
-                # Convert to DataFrame for visualization
                 df_alerts = pd.DataFrame(historical_alerts)
                 
-                # Convert timestamp strings to datetime objects
                 df_alerts['timestamp'] = df_alerts['timestamp'].apply(parse_datetime)
                 
-                # Filter by date range
                 mask = (df_alerts['timestamp'] >= start_datetime) & (df_alerts['timestamp'] <= end_datetime)
                 df_alerts = df_alerts.loc[mask]
                 
@@ -257,7 +238,7 @@ def main():
         except requests.exceptions.RequestException as e:
             st.error(f"Error fetching historical data: {str(e)}")
     
-    else:  # System Statistics
+    else: 
         st.header("System Statistics")
         
         try:
@@ -265,26 +246,55 @@ def main():
             response.raise_for_status()
             all_alerts = response.json()
             
+            st.markdown("### Overall Alert Statistics")
             col1, col2, col3 = st.columns(3)
             with col1:
-                st.metric("Total Alerts", len(all_alerts))
+                total_alerts = len(all_alerts)
+                st.metric(
+                    "Total Alerts Detected",
+                    f"{total_alerts:,}",
+                    help="Total number of security alerts detected since system initialization"
+                )
+                st.markdown(f"*Cumulative alerts across all severity levels*")
+            
             with col2:
                 recent_count = len([
                     alert for alert in all_alerts 
                     if parse_datetime(alert['timestamp']) >= datetime.now() - timedelta(hours=24)
                 ])
-                st.metric("Alerts (24h)", recent_count)
+                st.metric(
+                    "Recent Alerts (Last 24h)",
+                    f"{recent_count:,}",
+                    delta=f"{recent_count - total_alerts//7}" if total_alerts > 0 else None,
+                    help="Number of alerts detected in the last 24 hours"
+                )
+                st.markdown("*Showing recent threat activity*")
+            
             with col3:
                 high_severity = len([alert for alert in all_alerts if alert['severity'] >= 3])
-                st.metric("High Severity Alerts", high_severity)
+                st.metric(
+                    "Critical Security Threats",
+                    f"{high_severity:,}",
+                    help="Number of high and critical severity alerts"
+                )
+                st.markdown("*High priority threats requiring immediate attention*")
             
-            # Model performance metrics (if available)
-            st.subheader("Model Performance")
+            if total_alerts > 0:
+                st.markdown("### Threat Analysis")
+                st.markdown(f"""
+                - **Alert Distribution**: {(recent_count/total_alerts)*100:.1f}% of alerts occurred in the last 24 hours
+                - **Critical Threat Ratio**: {(high_severity/total_alerts)*100:.1f}% of total alerts are high severity
+                - **Average Daily Alerts**: {total_alerts/7:.1f} alerts per day (7-day average)
+                """)
+            
+            st.markdown("### Model Performance Metrics")
             try:
                 with open("output/model_performance.txt", "r") as f:
-                    st.text(f.read())
+                    metrics_text = f.read()
+                    st.markdown("```\n" + metrics_text + "\n```")
             except FileNotFoundError:
-                st.info("Model performance metrics not available")
+                st.info("Model performance metrics data is not available at this time")
+
         except requests.exceptions.RequestException as e:
             st.error(f"Error fetching system statistics: {str(e)}")
 
