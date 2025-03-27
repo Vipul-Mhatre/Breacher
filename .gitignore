@@ -44,8 +44,6 @@ Thumbs.db
 /sawtooth/keys/
 /sawtooth/data/
 
-
-
 env
 
 /package-lock.json
@@ -60,3 +58,10 @@ venv/
 .venv/
 env
 myenv/
+
+attack_distritbution.html
+ML & DB/output/attack_distribution.html
+ML & DB/output/attack_severity_timeline.html
+ML & DB/output/browser_distribution.html
+ML & DB/output/device_type_distribution.html
+ML & DB/output/feature_correlation_heatmap.html
