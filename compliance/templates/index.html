@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Compliance Tool</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css">
+</head>
+<body>
+    <nav>
+        <a href="/threats">View Threat Monitor</a>
+    </nav>
+    <div class="container mt-5">
+        <h1 class="text-center">Compliance Tool</h1>
+        <form id="scriptForm" class="mt-4">
+            <div class="mb-3">
+                <label for="os_type" class="form-label">Select Operating System:</label>
+                <select id="os_type" name="os_type" class="form-select">
+                    <option value="linux">Linux</option>
+                    <option value="windows">Windows</option>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-primary">Run Compliance Check</button>
+        </form>
+        <div class="mt-4">
+            <h3>Output:</h3>
+            <pre id="output" class="p-3 border bg-light"></pre>
+        </div>
+        <a href="#" id="downloadButton" class="btn btn-success mt-3">Download Report</a>
+    </div>
+
+    <script>
+        document.getElementById("scriptForm").addEventListener("submit", function (event) {
+            event.preventDefault();
+            const osType = document.getElementById("os_type").value;
+
+            fetch("/run", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ os_type: osType }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById("output").textContent = data.output;
+
+                const downloadButton = document.getElementById("downloadButton");
+                downloadButton.onclick = function () {
+                    fetch("/download-report", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ os_type: osType }),
+                    })
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const url = window.URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.style.display = "none";
+                        a.href = url;
+                        a.download = "CIS_Compliance_Report.txt";
+                        document.body.appendChild(a);
+                        a.click();
+                        window.URL.revokeObjectURL(url);
+                    });
+                };
+            })
+            .catch(error => {
+                document.getElementById("output").textContent = "Error: " + error;
+            });
+        });
+    </script>
+</body>
+</html>

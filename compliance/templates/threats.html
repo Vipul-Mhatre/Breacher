@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Real-time Threat Monitor</title>
+    <script>
+        function updateThreats() {
+            fetch('/threat-data')
+                .then(response => response.json())
+                .then(data => {
+                    const threatList = document.getElementById('threatList');
+                    threatList.innerHTML = '';
+                    data.connections.forEach(conn => {
+                        threatList.innerHTML += `
+                            <div class="threat-item">
+                                <p>Source IP: ${conn.source_ip}:${conn.source_port}</p>
+                                <p>Destination IP: ${conn.dest_ip}:${conn.dest_port}</p>
+                                <p>Process: ${conn.process_name}</p>
+                                <p>Attack Type: ${conn.attack_type}</p>
+                                <p>Severity: ${conn.severity}</p>
+                                <p>Action: ${conn.action}</p>
+                            </div>
+                        `;
+                    });
+                });
+        }
+
+        setInterval(updateThreats, 5000); // Update every 5 seconds
+        updateThreats(); // Initial update
+    </script>
+    <style>
+        .threat-item {
+            border: 1px solid #ccc;
+            margin: 10px;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+    </style>
+</head>
+<body>
+    <h1>Real-time Threat Monitor</h1>
+    <div id="threatList"></div>
+</body>
+</html>
